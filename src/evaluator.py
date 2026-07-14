@@ -23,10 +23,11 @@ def extract_troso_color(image, person_kpts):
 
     # 몸통 중심 픽셀의 색상(BGR) 가져오기 (몸통 중심 색상 = 유니폼 색상)
     h, w = image.shape[:2]
-    if 0 <= avg_x and 0 <= avg_y < h:
+    if 0 <= avg_x < w and 0 <= avg_y < h:
         return image[avg_y, avg_x]
     
-    return [0,0,0]
+    else:
+        return [0,0,0]
 
 # ==========================================
 # 👕 2. 팀 분류 (피아 식별)

@@ -11,7 +11,6 @@ def extract_troso_color(image, person_kpts):
     """
     선수의 원본 좌표를 이용해 유니폼의 색상을 추출
     """
-
     torso_pts = [person_kpts[i] for i in TORSO_JOINTS if person_kpts[i] is not None]
 
     if not torso_pts:
@@ -24,14 +23,12 @@ def extract_troso_color(image, person_kpts):
     # 몸통 중심 픽셀의 색상(BGR) 가져오기 (몸통 중심 색상 = 유니폼 색상)
     h, w = image.shape[:2]
     if 0 <= avg_x < w and 0 <= avg_y < h:
-        return image[avg_y, avg_x]
+        # BGR 색상값을 파이썬의 기본 int 형태로 안전하게 반환
+        return int(image[avg_y, avg_x][0]), int(image[avg_y, avg_x][1]), int(image[avg_y, avg_x][2])
     
     else:
-        return [0,0,0]
+        return [0,0,0]  
 
-# ==========================================
-# 👕 2. 팀 분류 (피아 식별)
-# ==========================================
 
 def split_teams(image, all_original_kpts):
     """
@@ -46,9 +43,6 @@ def split_teams(image, all_original_kpts):
     kmeans.fit(colors)
     return kmeans.labels_
 
-# ==========================================
-# 🏃‍♂️ 3. 가장 전진한 유효 좌표 찾기
-# ==========================================
 
 def get_advanced_x(top_down_kpts, direction):
     """
@@ -66,10 +60,6 @@ def get_advanced_x(top_down_kpts, direction):
     # 오른쪽 공격이면 가장 큰 x, 왼쪽 공격이면 가장 작은 x 반환
     return max(valid_x) if direction == 'right' else min(valid_x)
 
-
-# ==========================================
-# 4. 오프사이드 최종 판별 메인 로직
-# ==========================================
 
 def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'right', attack_team_id = 0):
     """
@@ -116,53 +106,3 @@ def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'ri
             offside_players.append(atk['id'])
             
     return offside_line_x, offside_players
-
-
-# ==========================================
-# 🧪 단독 테스트 실행 코드
-# ==========================================
-if __name__ == "__main__":
-    import cv2
-    from data_setup import setup_dataset, base_path
-    from cordinate import get_perspective_matrix, transform_all_keypoints
-    from detector import detect_players_with_roi, extract_person_keypoints
-
-    print("🚀 evaluator.py 단독 테스트를 시작합니다...")
-
-    train_data, _ = setup_dataset(base_path)
-    if len(train_data) > 0:
-        test_image = train_data[1]
-        img = cv2.imread(test_image)
-
-        matrix, _ = get_perspective_matrix(test_image)
-
-        if matrix is not None:
-            result, crop_x, crop_y = detect_players_with_roi(test_image)
-            
-            if result is not None:
-                original_kpts = extract_person_keypoints(result, offset_x=crop_x, offset_y=crop_y)
-                top_down_kpts = transform_all_keypoints(original_kpts, matrix)
-
-                print("\n▶️ [평가 중] 오프사이드 판독 로직 가동...")
-                line_x, offside_players = evaluate_offside(
-                    image=img, 
-                    original_kpts=original_kpts, 
-                    top_down_kpts=top_down_kpts, 
-                    attack_direction='right', 
-                    attack_team_id=0          
-                )
-
-                print("\n" + "="*40)
-                print(" 🏁 [테스트 최종 결과] ")
-                print("="*40)
-                if line_x is None:
-                    print(f"⚠️ 에러 발생: {offside_players}")
-                else:
-                    print(f"📍 최후방 수비수 기준선 (탑뷰 X좌표): {line_x}")
-                    if len(offside_players) > 0:
-                        print(f"🚨 오프사이드 위반 적발! (해당 공격수 ID: {offside_players})")
-                    else:
-                        print("✅ 온사이드 (위반한 공격수 없음)")
-                print("="*40)
-    else:
-        print("⚠️ 테스트할 이미지가 없습니다.")

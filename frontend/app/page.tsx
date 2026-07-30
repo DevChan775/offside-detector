@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import RoiDrawer from "@/components/RoiDrawer";
+import ResultOverlay from "@/components/ResultOverlay";
 
 export default function Home() {
   const [image, setImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [roi, setRoi] = useState<[number, number, number, number] | null>(null);
+
+  // 백엔드 결과를 저장할 메모장 생성
+  const [resultData, setResultData] = useState<any>(null);
 
   // 1. 이용자가 사진을 선택했을 경우
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +40,7 @@ export default function Home() {
 
     try {
       // 3. 백엔드로 패킷 전송
-      const response = await fetch("http://127.0.0.1:8000/analyze-offside", {
+      const response = await fetch("http://localhost:8000/analyze-offside", {
         method: "POST",
         body: formData,
       });
@@ -44,7 +48,10 @@ export default function Home() {
       // 4. 백엔드에서 계산이 끝나고 돌려준 결과(JSON)를 받아 화면에 표시
       const result = await response.json();
       console.log("백엔드에서 온 결과:", result);
-      alert("결과가 도착했습니다! (개발자 도구 확인)");
+
+      // 백엔드 결과를 resultData에 저장
+      setResultData(result)
+
     } catch (error) {
       console.error("통신 에러 발생:", error);
     }
@@ -67,6 +74,9 @@ export default function Home() {
             onRoiSelect = {(selectedRoi) => setRoi(selectedRoi)}
             />
       )}
-      </div>
+
+      {/* resultData가 도착했다면 3D 스튜디오에 데이터를 넣어서 화면에 보여줌*/}
+      {resultData && <ResultOverlay data = {resultData} />}
+    </div>
   );
 }

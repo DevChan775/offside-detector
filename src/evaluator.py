@@ -44,21 +44,24 @@ def split_teams(image, all_original_kpts):
     return kmeans.labels_
 
 
-def get_advanced_x(top_down_kpts, direction):
+def get_advanced_point(top_down_kpts, direction):
     """
-    팔/손을 제외한 유효 관절 중 가장 골대와 가까운 x좌표를 찾는다.
+    팔/손을 제외한 유효 관절 중 가장 골대와 가까운 (x,y) 좌표를 찾는다.
     """
-    valid_x = []
+    valid_pts = []
     for i, kpt in enumerate(top_down_kpts):
         if kpt is None: continue
         if i in INVALID_JOINTS: continue # 손/팔은 오프사이드 제외
 
-        valid_x.append(kpt[0]) # x좌표만 수집
+        valid_pts.append(kpt) # 수정 부분: x 좌표만 담지 않고 kpt 전체 좌표 (x,y)를 담음
 
-    if not valid_x: return None
+    if not valid_pts: return None
 
-    # 오른쪽 공격이면 가장 큰 x, 왼쪽 공격이면 가장 작은 x 반환
-    return max(valid_x) if direction == 'right' else min(valid_x)
+    # 오른쪽 공격이면 x가 가장 큰 좌표 쌍, 왼쪽이면 x가 가장 작은 좌표 쌍 반환
+    if direction == 'right':
+        return max(valid_pts, key = lambda pt: pt[0])
+    else:
+        return min(valid_pts, key=lambda pt: pt[0]) 
 
 
 def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'right', attack_team_id = 0):
@@ -70,16 +73,21 @@ def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'ri
 
     attackers = []
     defenders = []
+    all_players_data = []
 
     # 2. 각 선수의 가장 영향력 높은 점(X 좌표)를 구해서 팀별로 분류
     for i in range(len(top_down_kpts)):
-        adv_x = get_advanced_x(top_down_kpts[i], attack_direction)
-        if adv_x is None: continue
-        
-        player_data = {'id': i, 'x': adv_x}
-        if team_labels[i] == attack_team_id:
-            attackers.append(player_data)
+        adv_pt = get_advanced_point(top_down_kpts[i], attack_direction)
+        if adv_pt is None: continue
 
+        # numpy 숫자를 웹에서 읽기 편한 파이썬 기본 int로 안전하게 변환
+        team_id = int(team_labels[i])
+
+        player_data = {'id': i, 'x': adv_pt[0], 'y': adv_pt[1], 'team': team_id}
+        all_players_data.append(player_data) # 명부에 기록
+
+        if team_id == attack_team_id:
+            attackers.append(player_data)
         else:
             defenders.append(player_data)
 
@@ -97,7 +105,7 @@ def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'ri
 
     offside_line_x = defenders[0]['x']
 
-    # 4. 공격수들과 오프사이드 라인 비교 (회원님의 아이디어 부분!)
+    # 4. 공격수들과 오프사이드 라인 비교
     offside_players = []
     for atk in attackers:
         if attack_direction == 'right' and atk['x'] > offside_line_x:
@@ -105,4 +113,5 @@ def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'ri
         elif attack_direction == 'left' and atk['x'] < offside_line_x:
             offside_players.append(atk['id'])
             
-    return offside_line_x, offside_players
+    return offside_line_x, offside_players, all_players_data
+

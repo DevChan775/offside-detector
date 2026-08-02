@@ -20,25 +20,24 @@ app.add_middleware(
 )
 
 @app.post("/analyze-offside")
-async def analyze_offside(file: UploadFile = File(...), roi: str = Form(...)):
+async def analyze_offside(file: UploadFile = File(...), roi: str = Form(...), points: str = Form(...)):
     # 1. 파일 데이터 읽기
-    contents = await file.road()
+    contents = await file.read()
     img = process_web_image(contents)
 
     # 2. ROI 정보 파싱
     roi_data = json.loads(roi) # [x, y, w, h]
+    points_data = json.loads(points) 
 
     # 3. 오프사이드 판별 엔진 가동
     result, crop_x, crop_y = detect_players_with_roi(img, roi_data)
     original_kpts = extract_person_keypoints(result, offset_x = crop_x, offset_y = crop_y)
 
-    # 예시: 4개의 좌표는 나중에 프론트에서 받아와야 함
-    # 지금은 테스트를 위한 임시 좌표 사용
-    dummy_points = [[0, 0], [1000, 0], [1000, 1000], [0, 1000]] 
-    matrix, _ = get_perspective_matrix(img, dummy_points)
-    
+    # 프론트에서 받은 4개의 좌표 입력
+    matrix, _ = get_perspective_matrix(img, points_data)
+
     top_down_kpts = transform_all_keypoints(original_kpts, matrix)
-    line_x, offside_players = evaluate_offside(img, original_kpts, top_down_kpts)
+    line_x, offside_players, all_players_data = evaluate_offside(img, original_kpts, top_down_kpts)
     
     # 4. JSON 결과 반환
-    return {"offside_line": line_x, "players": offside_players}
+    return {"offside_line": line_x, "players": offside_players, "all_players_data": all_players_data}

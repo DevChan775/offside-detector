@@ -43,6 +43,14 @@ export default function RoiDrawer({ imageUrl, onRoiSelect }: RoiDrawerProps) {
   const handleMouseUp = () => {
     if (!isDrawing) return;
     setIsDrawing(false);
+  };
+
+  // 확인 버튼 추가 
+  const handleConfirm = () => {
+
+    if (startPos.x === currentPos.x && startPos.y === currentPos.y){
+      return alert("영역을 먼저 드래그 해주세요!")
+    }
 
     // [x, y, 너비, 높이] 계산 로직 (마우스를 거꾸로 드래그할 경우도 대비하여 Math.min 사용)
     const x = Math.min(startPos.x, currentPos.x);
@@ -69,7 +77,14 @@ export default function RoiDrawer({ imageUrl, onRoiSelect }: RoiDrawerProps) {
   // 실제 화면 출력 부분
   return (
     <div style={{ display: 'inline-block', position: 'relative', marginTop: '20px' }}>
-      <p style={{ fontWeight: 'bold' }}>📸 사진 위를 마우스로 드래그하여 분석 영역(ROI)을 지정해주세요.</p>
+      <p style={{ fontWeight: 'bold' }}>
+        📸 사진 위를 드래그 후 확인 버튼을 눌러주세요.
+      </p>
+
+      { /* 확인 버튼 */}
+      <button onClick = {handleConfirm} style = {{ marginLeft: '15px', padding: '5px', backgroundColor: 'black', color: 'white'}}>
+        확인 버튼
+        </button>
       
       {/* 사진과 그리기 영역을 감싸는 투명 유리판 */}
       <div

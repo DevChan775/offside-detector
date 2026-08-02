@@ -40,4 +40,40 @@ async def analyze_offside(file: UploadFile = File(...), roi: str = Form(...), po
     line_x, offside_players, all_players_data = evaluate_offside(img, original_kpts, top_down_kpts)
     
     # 4. JSON 결과 반환
-    return {"offside_line": line_x, "players": offside_players, "all_players_data": all_players_data}
+    return {"offside_line": line_x, "players": offside_players, "all_players_data": all_players_data}   
+
+
+
+@app.post("/get-coordinates")
+async def get_coordinates(file: UploadFile = File(...), roi: str = Form(...)):
+    # 1. 프론트엔드에서 보낸 사진과 드래그 영역(ROI) 데이터를 읽어옴
+    contents = await file.read()
+    img = process_web_image(contents)
+    roi_data = json.loads(roi)
+
+    # 2. YOLO AI를 이용해 해당 영역 안의 선수들을 탐지하고 관절 좌표를 추출
+    result, crop_x, crop_y = detect_players_with_roi(img, roi_data)
+    original_kpts = extract_person_keypoints(result, offset_x=crop_x, offset_y=crop_y)
+
+    # 3. 화면에 버튼을 띄우기 위해 선수의 머리 위 좌표를 계산
+    player_coords = []
+    for i, kpts in enumerate(original_kpts):
+        # 관절 데이터 중 화면에 보이는 유효한 좌표만 모음
+        valid_y = [pt[1] for pt in kpts if pt is not None]
+        valid_x = [pt[0] for pt in kpts if pt is not None]
+        
+        if valid_y and valid_x:
+            # y값이 가장 작은 곳(가장 위쪽)을 머리 꼭대기로 삼음
+            top_y = min(valid_y)
+            # x값들의 평균을 구해 몸의 중앙 위치를 잡음
+            center_x = sum(valid_x) / len(valid_x) 
+            
+            # 프론트엔드로 보낼 명부에 추가
+            player_coords.append({
+                "id": i, 
+                "x": int(center_x), 
+                "y": int(top_y) - 20 # 머리 꼭대기보다 살짝 더 위(-20px)에 버튼을 띄우기 위함
+            })
+
+    # 4. 완성된 좌표 명부를 JSON 형태로 프론트엔드에 돌려줌
+    return {"players": player_coords}

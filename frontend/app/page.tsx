@@ -3,11 +3,15 @@
 import { useState } from "react";
 import RoiDrawer from "@/components/RoiDrawer";
 import ResultOverlay from "@/components/ResultOverlay";
+import PointDrawer from "@/components/PointDrawer"; 
 
 export default function Home() {
   const [image, setImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [roi, setRoi] = useState<[number, number, number, number] | null>(null);
+
+  // 4개의 점 좌표를 저정할 메모장 생성
+  const [points, setPoints] = useState<number[][] | null>(null);
 
   // 백엔드 결과를 저장할 메모장 생성
   const [resultData, setResultData] = useState<any>(null);
@@ -30,6 +34,7 @@ export default function Home() {
   const handleSubmit = async () => {
     if (!image) return alert("사진을 먼저 올려주세요!");
     if (!roi) return alert("사진 위를 드래그하여 분석 영역을 지정해주세요!");
+    if (!points || points.length !== 4) return alert("경기장의 4개의 모서리를 모두 클릭해주세요!");
 
     // 통신 패킷을 준비하고 사진과 좌표를 담음
     const formData = new FormData();
@@ -38,9 +43,12 @@ export default function Home() {
     // 배열 형태인 좌표를 백엔드가 읽기 편하게 문자열로 변환하여 전송
     formData.append("roi", JSON.stringify(roi));
 
+    // 4개의 점 좌표 배열을 담음
+    formData.append("points", JSON.stringify(points));
+
     try {
       // 3. 백엔드로 패킷 전송
-      const response = await fetch("http://localhost:8000/analyze-offside", {
+      const response = await fetch("http://127.0.0.1:8000/analyze-offside", {
         method: "POST",
         body: formData,
       });
@@ -58,7 +66,7 @@ export default function Home() {
   };
 
   // 실제 화면에 보여질 HTML 구조
-  return (
+return (
     <div style = {{padding: '50px' }}>
       <h1>오프사이드 판별 웹 화면⚽</h1>
       
@@ -67,15 +75,22 @@ export default function Home() {
         <button onClick = {handleSubmit} style = {{ marginLeft : '10px' }}>분석 시작</button>
       </div>
 
-      {/* 현상된 사진 주소가 있을 때만 Roi 실행 */}
+      {/* 사진이 올라왔을 때 도구들 보여주기 */}
       {imageUrl && (
-        <RoiDrawer
-            imageUrl = {imageUrl}
-            onRoiSelect = {(selectedRoi) => setRoi(selectedRoi)}
-            />
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <RoiDrawer
+              imageUrl = {imageUrl}
+              onRoiSelect = {(selectedRoi) => setRoi(selectedRoi)}
+          />
+          
+          {/* 점 찍기 부품을 화면에 배치 */}
+          <PointDrawer
+              imageUrl={imageUrl}
+              onPointsSelect={(selectedPoints) => setPoints(selectedPoints)}
+          />
+        </div>
       )}
 
-      {/* resultData가 도착했다면 3D 스튜디오에 데이터를 넣어서 화면에 보여줌*/}
       {resultData && <ResultOverlay data = {resultData} />}
     </div>
   );

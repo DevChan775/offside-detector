@@ -31,11 +31,14 @@ async def analyze_offside(file: UploadFile = File(...), roi: str = Form(...), po
 
     # 3. 오프사이드 판별 엔진 가동
     result, crop_x, crop_y = detect_players_with_roi(img, roi_data)
+
+    # original_kpts: 확인된 모든 선수의 관절 좌표가 정리되어 있음
     original_kpts = extract_person_keypoints(result, offset_x = crop_x, offset_y = crop_y)
 
-    # 프론트에서 받은 4개의 좌표 입력
+    # matrix: 원근감을 보정하기 위한 점 이동 규칙이 수치로 존재함 
     matrix, _ = get_perspective_matrix(img, points_data)
 
+    # top_down_kpts: 모든 선수들의 좌표가 원근감이 보정되어 저장됨
     top_down_kpts = transform_all_keypoints(original_kpts, matrix)
     line_x, offside_players, all_players_data = evaluate_offside(img, original_kpts, top_down_kpts)
     

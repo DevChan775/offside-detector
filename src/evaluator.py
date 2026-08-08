@@ -36,6 +36,7 @@ def split_teams(image, all_original_kpts):
     """
     colors = []
     for kpts in all_original_kpts:
+        # extract_troso_color: 선수 유니폼 색상 추출 함수 
         colors.append(extract_troso_color(image, kpts))
 
     # 색상 데이터를 바탕으로 0과 1, 두 개의 그룹으로 클러스터링
@@ -57,7 +58,7 @@ def get_advanced_point(top_down_kpts, direction):
 
     if not valid_pts: return None
 
-    # 오른쪽 공격이면 x가 가장 큰 좌표 쌍, 왼쪽이면 x가 가장 작은 좌표 쌍 반환
+    # TODO: 공격 방향(direction)을 프론트엔드 입력 기반 동적 할당 필요 (현재는 'right'로 고정)
     if direction == 'right':
         return max(valid_pts, key = lambda pt: pt[0])
     else:
@@ -66,9 +67,9 @@ def get_advanced_point(top_down_kpts, direction):
 
 def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'right', attack_team_id = 0):
     """
-    모든 재료를 받아 최종적으로 오프사이드 라인을 긋고 위반 선수를 찾아냄
+    모든 함수를 받아 최종적으로 오프사이드 라인을 긋고 위반 선수를 찾아냄
     """
-    # 1. 선수들 팀 나누기 (0번 팀 vs 1번 팀)
+    # 1. 선수들 팀 나누기 (0번 팀 vs 1번 팀  ex: [0, 0, 1, ... ])
     team_labels = split_teams(image, original_kpts)
 
     attackers = []
@@ -114,4 +115,5 @@ def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'ri
             offside_players.append(atk['id'])
             
     return offside_line_x, offside_players, all_players_data
+
 

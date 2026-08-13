@@ -1,1 +1,16 @@
-# offside-detector
+ # ⚽🖥️ offside-detector
+
+ > 일반인들도 사용할 수 있는 오프사이드 검출용 VAR 구현
+
+- 사진 삽입 부분
+
+## 📖 Description
+
+- 축구 경기 이미지를 이용하여 AI 관절 추적 및 원근감 보정을 거쳐 3D VAR 오프사이드 판정 화면을 시각화하는 프로젝트입니다
+
+## 🖥️ Demo
+
+
+
+
+

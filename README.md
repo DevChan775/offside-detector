@@ -2,7 +2,7 @@
 
  > 일반인들도 사용할 수 있는 오프사이드 검출용 VAR 구현
 
-- 사진 삽입 부분
+- <img width="535" height="372" alt="image" src="https://github.com/user-attachments/assets/cad8aafa-7584-495d-8c6b-c669bfb62cff" />
 
 ## 📖 Description
 

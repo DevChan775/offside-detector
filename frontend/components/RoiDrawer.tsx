@@ -62,7 +62,6 @@ export default function RoiDrawer({ imageUrl, onRoiSelect }: RoiDrawerProps) {
     onRoiSelect([Math.round(x), Math.round(y), Math.round(w), Math.round(h)]);
   };
 
-  // 화면에 덧그려질 빨간색 반투명 네모 상자의 디자인
   const boxStyle = {
     position: 'absolute' as const,
     left: Math.min(startPos.x, currentPos.x),
@@ -71,33 +70,29 @@ export default function RoiDrawer({ imageUrl, onRoiSelect }: RoiDrawerProps) {
     height: Math.abs(currentPos.y - startPos.y),
     border: '2px solid red',
     backgroundColor: 'rgba(255, 0, 0, 0.2)',
-    pointerEvents: 'none' as const, // 네모가 마우스 클릭을 방해하지 않도록 설정
+    pointerEvents: 'none' as const,
   };
 
   // 실제 화면 출력 부분
   return (
     <div style={{ display: 'inline-block', position: 'relative', marginTop: '20px' }}>
       <p style={{ fontWeight: 'bold' }}>
-        📸 사진 위를 드래그 후 확인 버튼을 눌러주세요.
+        📸 사진 위를 드래그 후 확인 버튼을 눌러주세요!
       </p>
 
-      { /* 확인 버튼 */}
       <button onClick = {handleConfirm} style = {{ marginLeft: '15px', padding: '5px', backgroundColor: 'black', color: 'white'}}>
         확인 버튼
         </button>
-      
-      {/* 사진과 그리기 영역을 감싸는 투명 유리판 */}
+
       <div
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp} // 마우스가 사진 밖으로 나가도 그리기를 멈춤
+        onMouseLeave={handleMouseUp} 
         style={{ position: 'relative', display: 'inline-block', cursor: 'crosshair', userSelect: 'none' }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img ref={imageRef} src={imageUrl} alt="업로드된 축구 사진" draggable = {false} style={{ maxWidth: '100%', display: 'block' }} />
         
-        {/* 드래그 중이거나 영역 지정이 완료되었을 때 네모 상자를 화면에 표시 */}
         {(isDrawing || startPos.x !== currentPos.x) && <div style={boxStyle}></div>}
       </div>
     </div>

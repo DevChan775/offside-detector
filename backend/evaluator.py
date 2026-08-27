@@ -59,18 +59,21 @@ def get_advanced_point(top_down_kpts, direction):
     if not valid_pts: return None
 
     # TODO: 공격 방향(direction)을 프론트엔드 입력 기반 동적 할당 필요 (현재는 'right'로 고정)
+    # TODO: 현재 x 좌표로만 옵사이드 여부를 판단 -> 골대 위치, 원근감 보정 방향을 고려 후 코드 구성 필요
     if direction == 'right':
         return max(valid_pts, key = lambda pt: pt[0])
     else:
         return min(valid_pts, key=lambda pt: pt[0]) 
 
-
-def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'right', attack_team_id = 0):
+    
+def evaluate_offside(image, original_kpts, top_down_kpts, selected_player_id , attack_direction = 'right'):
     """
     모든 함수를 받아 최종적으로 오프사이드 라인을 긋고 위반 선수를 찾아냄
     """
     # 1. 선수들 팀 나누기 (0번 팀 vs 1번 팀  ex: [0, 0, 1, ... ])
     team_labels = split_teams(image, original_kpts)
+
+    attack_team_id = int(team_labels[selected_player_id])
 
     attackers = []
     defenders = []
@@ -92,7 +95,7 @@ def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'ri
         else:
             defenders.append(player_data)
 
-    # 3. 오프사이드 기준선 긋기 (수비팀에서 두 번째로 뒤에 있는 선수 찾기)
+    # 3. 오프사이드 기준선 긋기
     if len(defenders) < 1:
         return None, "⚠️ 화면에 수비수가 1명도 없어서 기준선을 그을 수 없습니다."
     
@@ -115,5 +118,4 @@ def evaluate_offside(image, original_kpts, top_down_kpts, attack_direction = 'ri
             offside_players.append(atk['id'])
             
     return offside_line_x, offside_players, all_players_data
-
 

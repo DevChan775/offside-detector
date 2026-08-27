@@ -11,7 +11,7 @@ from evaluator import evaluate_offside
 
 app = FastAPI()
 
-# 웹 브라우저(프론트엔드)와의 통신을 허용하는 설정
+# CORS 설정 
 app.add_middleware(
     CORSMiddleware,
     allow_origins = ["*"],
@@ -20,63 +20,63 @@ app.add_middleware(
 )
 
 @app.post("/analyze-offside")
-async def analyze_offside(file: UploadFile = File(...), roi: str = Form(...), points: str = Form(...)):
-    # 1. 파일 데이터 읽기
+async def analyze_offside(file: UploadFile = File(...), roi: str = Form(...), points: str = Form(...), attack_team: int = Form(...), attack_direction: str = Form(...)):
+    """
+    프론트엔드 데이터를 바탕으로 오프사이드 위반 여부를 판별하고 결과를 반환하는 API
+    """    
     contents = await file.read()
     img = process_web_image(contents)
 
-    # 2. ROI 정보 파싱
-    roi_data = json.loads(roi) # [x, y, w, h]
+    roi_data = json.loads(roi) 
     points_data = json.loads(points) 
 
-    # 3. 오프사이드 판별 엔진 가동
+    # 모델 추론 및 관절 좌표 추출
     result, crop_x, crop_y = detect_players_with_roi(img, roi_data)
-
-    # original_kpts: 확인된 모든 선수의 관절 좌표가 정리되어 있음
     original_kpts = extract_person_keypoints(result, offset_x = crop_x, offset_y = crop_y)
 
-    # matrix: 원근감을 보정하기 위한 점 이동 규칙이 수치로 존재함 
+    # 원근감 보정 
     matrix, _ = get_perspective_matrix(img, points_data)
-
-    # top_down_kpts: 모든 선수들의 좌표가 원근감이 보정되어 저장됨
     top_down_kpts = transform_all_keypoints(original_kpts, matrix)
-    line_x, offside_players, all_players_data = evaluate_offside(img, original_kpts, top_down_kpts)
+
+    # 오프사이드 최종 판별
+    line_x, offside_players, all_players_data = evaluate_offside(
+        img, original_kpts, top_down_kpts , selected_player_id = attack_team, attack_direction = attack_direction
+        )
     
-    # 4. JSON 결과 반환
-    return {"offside_line": line_x, "players": offside_players, "all_players_data": all_players_data}   
+    return {
+        "offside_line": line_x, 
+        "players": offside_players, 
+        "all_players_data": all_players_data}   
 
 
 
 @app.post("/get-coordinates")
 async def get_coordinates(file: UploadFile = File(...), roi: str = Form(...)):
-    # 1. 프론트엔드에서 보낸 사진과 드래그 영역(ROI) 데이터를 읽어옴
+    """
+    선수 선택 버튼 렌더링을 위해 이미지 내 각 선수의 머리 위 좌표를 개산하여 반환하는 API
+    """
     contents = await file.read()
     img = process_web_image(contents)
     roi_data = json.loads(roi)
 
-    # 2. YOLO AI를 이용해 해당 영역 안의 선수들을 탐지하고 관절 좌표를 추출
     result, crop_x, crop_y = detect_players_with_roi(img, roi_data)
-    original_kpts = extract_person_keypoints(result, offset_x=crop_x, offset_y=crop_y)
+    original_kpts = extract_person_keypoints(result, offset_x = crop_x, offset_y = crop_y)
 
-    # 3. 화면에 버튼을 띄우기 위해 선수의 머리 위 좌표를 계산
     player_coords = []
     for i, kpts in enumerate(original_kpts):
-        # 관절 데이터 중 화면에 보이는 유효한 좌표만 모음
+
         valid_y = [pt[1] for pt in kpts if pt is not None]
         valid_x = [pt[0] for pt in kpts if pt is not None]
         
         if valid_y and valid_x:
-            # y값이 가장 작은 곳(가장 위쪽)을 머리 꼭대기로 삼음
             top_y = min(valid_y)
-            # x값들의 평균을 구해 몸의 중앙 위치를 잡음
             center_x = sum(valid_x) / len(valid_x) 
             
-            # 프론트엔드로 보낼 명부에 추가
             player_coords.append({
                 "id": i, 
                 "x": int(center_x), 
                 "y": int(top_y) - 20 # 머리 꼭대기보다 살짝 더 위(-20px)에 버튼을 띄우기 위함
             })
 
-    # 4. 완성된 좌표 명부를 JSON 형태로 프론트엔드에 돌려줌
+
     return {"players": player_coords}
